@@ -24,3 +24,11 @@ The project uses the Delaney (ESOL) dataset, which contains experimentally measu
 
 ## Goal
 The main objective is not only to build predictive models, but also to understand how different representations affect model performance in cheminformatics tasks.
+
+## Results
+
+| Model | MAE | RMSE | R² |
+|------|-----|------|----|
+| Descriptor-based NN (vol1) | 0.5405 | 0.7085 | 0.8795 |
+| Morgan fingerprint NN (vol2) | 0.9072 | 1.1747 | 0.6591 |
+| Hybrid (fingerprint + descriptors, vol3) | 0.6393 | 0.9151 | 0.8214 |
