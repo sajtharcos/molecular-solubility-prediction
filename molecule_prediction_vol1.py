@@ -5,11 +5,12 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from rdkit import Chem
 from rdkit.Chem import Descriptors
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 # Load dataset
 df = pd.read_excel("Chem/delaney-fixed.xlsx")
 
-# 2. Define list of column names
+# Define list of column names
 cols = df.columns.tolist()
 
 features_list = []
@@ -17,25 +18,25 @@ target_list = []
 
 for index, row in df.iterrows():
     # Compute chemical features from SMILES if needed
-    mol  = Chem.MolFromSmiles(row["smiles"])
+    mol = Chem.MolFromSmiles(row["smiles"])
     if mol:
         # Define features
         # If available in Excel, use them, otherwise compute with RDKit
-        
+
         # 1. Molecular weight
         mw = row["Molecular Weight"] if "Molecular Weight" in cols else Descriptors.MolWt(mol)
-        
+
         # 2. H-bond donors
         h_donors = row["Number of H-Bond Donors"] if "Number of H-Bond Donors" in cols else Descriptors.NumHDonors(mol)
-        
+
         # 3. LogP (lipophilicity) - not included in Excel by default, compute it
         logp = Descriptors.MolLogP(mol)
-        
+
         # 4. Number of rings
         rings = row["Number of Rings"] if "Number of Rings" in cols else Descriptors.CalcNumRings(mol)
 
         features_list.append([mw, h_donors, logp, rings])
-        
+
         # Target value (assumed to always exist)
         target_col = "measured log solubility in mols per litre"
         target_list.append(row[target_col])
@@ -80,44 +81,56 @@ class SolubilityNet(nn.Module):
 
 model = SolubilityNet(input_dim=X.shape[1])
 
-# 1. Model, loss function and optimizer
+# Model, loss function and optimizer
 criterion = nn.MSELoss()  # Mean Squared Error (lower is better)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.01)  # Optimizer ("teacher")
+optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 
-# 2. Training loop
+# Training loop
 epochs = 1000
 train_losses = []
 
 print("Training started...")
 for epoch in range(epochs):
     model.train()
-    optimizer.zero_grad()  # Reset gradients
-    
+    optimizer.zero_grad()
+
     # Prediction and loss calculation
     outputs = model(X_train)
     loss = criterion(outputs, y_train)
-    
-    # Backpropagation (learning happens here)
+
+    # Backpropagation
     loss.backward()
     optimizer.step()
-    
+
     train_losses.append(loss.item())
-    
+
     if (epoch + 1) % 10 == 0:
         print(f'Epoch [{epoch+1}/{epochs}], Loss: {loss.item():.4f}')
 
 print("Training finished!")
 
+# Evaluation
 model.eval()
 with torch.no_grad():
     predictions = model(X_test)
     test_loss = criterion(predictions, y_test)
+
+    y_true = y_test.numpy()
+    y_pred = predictions.numpy()
+
+    mae = mean_absolute_error(y_true, y_pred)
+    rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+    r2 = r2_score(y_true, y_pred)
+
     print(f'\nTest loss: {test_loss.item():.4f}')
+    print(f'MAE  = {mae:.4f}')
+    print(f'RMSE = {rmse:.4f}')
+    print(f'R²   = {r2:.4f}')
 
 # Visualization: how well did we predict?
-plt.figure(figsize=(8,6))
-plt.scatter(y_test.numpy(), predictions.numpy(), alpha=0.5, color='blue')
-plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--')  # Ideal line
+plt.figure(figsize=(8, 6))
+plt.scatter(y_true, y_pred, alpha=0.5, color='blue')
+plt.plot([y_true.min(), y_true.max()], [y_true.min(), y_true.max()], 'r--')  # Ideal line
 plt.xlabel('True solubility')
 plt.ylabel('Predicted solubility')
 plt.title('True vs Predicted values')
