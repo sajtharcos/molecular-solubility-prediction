@@ -20,7 +20,7 @@ The project uses the Delaney (ESOL) dataset, which contains experimentally measu
 - PyTorch
 - RDKit
 - scikit-learn
-- PyTorch Geometric (for GNN models)
+
 
 ## Goal
 The main objective is not only to build predictive models, but also to understand how different representations affect model performance in cheminformatics tasks.
